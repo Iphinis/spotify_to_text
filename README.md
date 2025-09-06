@@ -63,36 +63,36 @@ deactivate
 ```
 
 # Usage / CLI
-Here are some example commands you can run in the python environment.
+Here are some examples of commands you can run in the python environment.
 
-Run the JSON exporter (interactive playlist selection):
+Run the JSON exporter in a specific path (interactive playlist selection):
 ```bash
 python src/main.py --out exports
 ```
 
 Export all playlists in JSON (non-interactive):
 ```bash
-python src/main.py --out exports --all
+python src/main.py --all
 ```
 
 Set custom TTL (in days) at runtime:
 ```bash
-python src/main.py --out exports --all --ttl-days 1
+python src/main.py --all --ttl-days 1
 ```
 
 Purge expired exports (honors `expires_at`):
 ```bash
-python src/main.py --out exports --purge
+python src/main.py --purge
 ```
 
 Force-delete all export JSON files (confirmation required; use `--yes` to skip prompt):
 ```bash
-python src/main.py --out exports --purge-all
+python src/main.py --purge-all
 ```
 
 Delete exports for a specific Spotify user id (`owner_id`):
 ```bash
-python src/main.py --out exports --delete-owner <OWNER_ID>
+python src/main.py --delete-owner <OWNER_ID>
 ```
 
 Disconnect (remove saved `SPOTIFY_REFRESH_TOKEN` from `.env`; use `--yes` to skip prompt):
@@ -107,7 +107,7 @@ python src/main.py --clear-env
 
 To avoid saving the refresh token automatically, run with `--no-save-refresh`.
 
-You can automate the purge with a cron job, for instance.
+You can automate the purge using a cron job, for instance.
 
 # Disconnecting & revoking access
 1. Remove stored refresh token (use `--disconnect`) or manually remove `SPOTIFY_REFRESH_TOKEN` from `.env`.
