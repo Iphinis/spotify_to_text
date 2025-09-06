@@ -35,9 +35,9 @@ Copy
 cp .env.example .env
 ```
 
-Paste your Spotify tokens in the `.env` fields.
+Paste your Spotify tokens into the `.env` fields.
 
-Then follow one of the following installation.
+Then follow one of the following installations.
 
 ## Installation with pipenv
 ```bash
