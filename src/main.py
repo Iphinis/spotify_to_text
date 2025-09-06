@@ -1,11 +1,13 @@
+#!/usr/bin/env python3
 """
-CLI entrypoint. It wires together env, auth, token refresh and calls export_json.
+CLI entrypoint. It wires together env, auth, token refresh and calls export_json. Provides --plain-files which writes plain text files (playlist_<id>.txt) next to each JSON export
 Also provides --purge, --purge-all, --delete-owner, --disconnect and --clear-env utilities to manage stored exports and env.
 """
 import os
 import sys
 import argparse
 from dotenv import load_dotenv
+
 from env_utils import save_to_env, ENV_PATH, ensure_env_file, remove_env_key
 from auth import authorization_code_flow, refresh_token_flow
 from export_json import export_playlists_and_tracks
@@ -27,16 +29,22 @@ def main():
     parser = argparse.ArgumentParser(description='Export Spotify playlists to JSON (uses .env)')
     parser.add_argument('--out', default='exports', help='Output directory for per-playlist JSON files')
     parser.add_argument('--all', action='store_true', help='Export all playlists without prompt')
-    parser.add_argument('--no-save-refresh', action='store_true', help="Do NOT save the refresh token to the .env if received")
+    parser.add_argument('--no-save-refresh', action='store_true',
+                        help="Do NOT save the refresh token to the .env if received")
     parser.add_argument('--env', help='Path to .env (optional)')
     parser.add_argument('--purge', action='store_true', help='Purge expired exports in the output directory and exit')
-    parser.add_argument('--purge-all', action='store_true', help='Force-delete ALL export JSON files in the output directory (confirmation required unless --yes)')
+    parser.add_argument('--purge-all', action='store_true',
+                        help='Force-delete ALL export JSON files in the output directory (confirmation required unless --yes)')
     parser.add_argument('--delete-owner', help='Delete exports for the given owner_id (owner Spotify user id) and exit')
-    parser.add_argument('--disconnect', action='store_true', help='Remove saved SPOTIFY_REFRESH_TOKEN from .env (disconnect)')
+    parser.add_argument('--disconnect', action='store_true',
+                        help='Remove saved SPOTIFY_REFRESH_TOKEN from .env (disconnect)')
     parser.add_argument('--clear-env', action='store_true', help='Clear the .env file (truncate). Use with caution.')
     parser.add_argument('--yes', action='store_true', help='Answer yes to confirmation prompts')
     parser.add_argument('--ttl-days', type=int, default=int(os.environ.get('EXPORT_TTL_DAYS', '2')),
                         help='Number of days to keep exported files (default from ENV or 2)')
+    parser.add_argument('--plain-files', action='store_true',
+                        help='Also write plain text files next to the JSON exports')
+
     args = parser.parse_args()
 
     env_path = args.env or ENV_PATH
@@ -116,7 +124,13 @@ def main():
         sys.exit(1)
 
     try:
-        export_playlists_and_tracks(access_token, args.out, export_all=args.all, ttl_days=args.ttl_days)
+        export_playlists_and_tracks(
+            access_token,
+            args.out,
+            export_all=args.all,
+            ttl_days=args.ttl_days,
+            write_plain_files=bool(args.plain_files)
+        )
     except Exception as e:
         print('Error:', e)
         sys.exit(1)

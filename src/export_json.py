@@ -1,6 +1,7 @@
 """
 Exports playlists and tracks to JSON using spotify_api and utils helpers.
-Writes one JSON file per playlist and includes an expires_at timestamp for TTL-based purge.
+Writes one JSON file per playlist and optionally writes a plain-text (.txt)
+file next to each JSON containing "Title — Artist1, Artist2" lines.
 """
 import json
 import os
@@ -11,9 +12,10 @@ from spotify_api import paged_get
 API_BASE = "https://api.spotify.com/v1"
 
 
-def export_playlists_and_tracks(access_token, out_path, export_all=False, ttl_days=2):
-    """Retrieve playlists and tracks and write per-playlist JSON files into the output directory.
-    out_path can be a directory; by default 'exports/'. Returns a dict summary.
+def export_playlists_and_tracks(access_token, out_path, export_all=False, ttl_days=2, write_plain_files=False):
+    """
+    Retrieve playlists and tracks and write per-playlist JSON files into the output directory.
+    If write_plain_files=True, also create playlist_<playlist_id>.txt alongside the JSON..
     """
     out_dir = out_path if os.path.isdir(out_path) else os.path.dirname(out_path) or 'exports'
     if not os.path.exists(out_dir):
@@ -40,7 +42,7 @@ def export_playlists_and_tracks(access_token, out_path, export_all=False, ttl_da
 
     selected = playlists if export_all else []
     if not export_all:
-        print('Playlists found:')
+        print('\nPlaylists found:')
         for idx, pl in enumerate(playlists):
             print(f"[{idx}] {pl['name']} (tracks: {pl['total_tracks']})")
         choice = input("Enter indices separated by commas, or 'a' to export all: ").strip()
@@ -49,19 +51,15 @@ def export_playlists_and_tracks(access_token, out_path, export_all=False, ttl_da
         else:
             try:
                 indices = [int(x.strip()) for x in choice.split(',') if x.strip() != '']
-
-                if any([i < 0 or i >= len(playlists) for i in indices]):
-                    raise IndexError
-
                 for i in indices:
-                    selected.append(playlists[i])
+                    if 0 <= i < len(playlists):
+                        selected.append(playlists[i])
             except Exception:
-                print('Invalid selection - aborting.')
+                print('Invalid selection — aborting.')
                 return None
 
-    summary = {"exported_at": now_iso_utc(), "exports": []}
     for pl in selected:
-        print(f"Processing playlist: {pl['name']} (id={pl['id']}) - {pl['total_tracks']} tracks")
+        print(f"\nProcessing playlist: {pl['name']} (id={pl['id']}) — {pl['total_tracks']} tracks")
         tracks_items = paged_get(f"{API_BASE}/playlists/{pl['id']}/tracks", access_token, params={"limit": 100})
         tracks_out = []
         for item in tracks_items:
@@ -90,18 +88,37 @@ def export_playlists_and_tracks(access_token, out_path, export_all=False, ttl_da
             'tracks': tracks_out
         }
 
-        # write per-playlist file named by playlist id
+        # write per-playlist JSON file named by playlist id
         filename = f"playlist_{pl['id']}.json"
         file_path = os.path.join(out_dir, filename)
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(playlist_output, f, ensure_ascii=False, indent=2)
         print(f" -> wrote {file_path} ({len(tracks_out)} tracks)")
-        summary['exports'].append({'playlist_id': pl['id'], 'file': file_path, 'expires_at': expires_at})
 
-    # also write a summary file
-    summary_path = os.path.join(out_dir, 'summary.json')
-    with open(summary_path, 'w', encoding='utf-8') as f:
-        json.dump(summary, f, ensure_ascii=False, indent=2)
+        # optionally write plain-text file alongside the JSON file
+        if write_plain_files:
+            txt_lines = []
+            for t in tracks_out:
+                title = t.get('title') or "<unknown title>"
+                artists = t.get('artists') or []
+                # ensure artists are strings
+                artists_clean = []
+                for a in artists:
+                    if isinstance(a, str):
+                        artists_clean.append(a)
+                    elif isinstance(a, dict):
+                        name = a.get('name')
+                        if name:
+                            artists_clean.append(name)
+                artists_str = ", ".join(artists_clean) if artists_clean else "Unknown artist"
+                txt_lines.append(f"{title} {artists_str}")
+            txt_filename = f"playlist_{pl['id']}.txt"
+            txt_path = os.path.join(out_dir, txt_filename)
+            try:
+                with open(txt_path, 'w', encoding='utf-8') as tf:
+                    tf.write("\n".join(txt_lines) + ("\n" if txt_lines else ""))
+                print(f" -> wrote plain text {txt_path}")
+            except Exception as e:
+                print(f"Failed to write plain text file {txt_path}: {e}")
 
-    print(f"Export completed. Summary: {summary_path}")
-    return summary
+    print(f"\nExport completed.")
