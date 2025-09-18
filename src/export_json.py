@@ -111,7 +111,7 @@ def export_playlists_and_tracks(access_token, out_path, export_all=False, ttl_da
                         if name:
                             artists_clean.append(name)
                 artists_str = ", ".join(artists_clean) if artists_clean else "Unknown artist"
-                txt_lines.append(f"{title} - [{artists_str}]")
+                txt_lines.append(f"{title} [{artists_str}]")
             txt_filename = f"playlist_{pl['id']}.txt"
             txt_path = os.path.join(out_dir, txt_filename)
             try:
